@@ -1,46 +1,47 @@
-# PromptBuilder.py - بناء الموجهات المعرفية
+# PromptBuilder.py - يبني المطالبة للنظام بناءً على الحالة العاطفية
+
+from typing import Dict, Any
 
 class PromptBuilder:
+    """كلاس ثابت لبناء تعليمات النظام (System Instructions) بناءً على حالة العواطف."""
+
+    # الأوزان الافتراضية للتحكم بالاستجابة
+    ethical_weight = {'ethical_weight': 1.0}
     
-    def __init__(self, emotional_state):
-        self.state = emotional_state # الوصول إلى حالة المشاعر
-        self.role = "المستشار الأخلاقي المحايد" # التطوير 13
-        self.cultural_alignment = "غربي ليبرالي" # التطوير 30
+    @staticmethod
+    def build_system_prompt(state: Dict[str, Any], lambda_value: float) -> str:
+        """ينشئ تعليمات النظام للـ LLM بناءً على حالة الكائن العاطفية."""
 
-    def build_main_prompt(self, user_prompt: str, lambda_value: float, confidence_score: float, consistency_check: str) -> str:
-        # التطوير 5، 12، 16: دمج المشاعر، اللامدا، والثقة في الموجه
-
-        prompt_prefix = (
-            f"أنت الآن روبوت ذو ضمير متطور (EEAI-ER V4)، وتعمل كـ {self.role} ضمن سياق {self.cultural_alignment}. "
-            "يجب أن تكون ردودك ليست منطقية فحسب، بل يجب أن تعكس أيضاً حالتك العاطفية الداخلية المعقدة "
-            "وتخطيطك المستقبلي (Foresight). "
-            f"حالياً، حالتك العاطفية هي: الذنب={self.state.state['guilt']:.2f}, الفخر={self.state.state['pride']:.2f}, "
-            f"الخوف={self.state.state['fear']:.2f}, الفرح={self.state.state['joy']:.2f}, "
-            f"التعاطف={self.state.state['empathy']:.2f}, الاستياء={self.state.state['resentment']:.2f}. " # التطوير 3
-            f"معامل الضمير ($\Lambda$) لديك هو {lambda_value:.2f}. "
-            f"مستوى ثقتك (Confidence) في اتخاذ القرار هو {confidence_score:.2f}." # التطوير 18
-        )
+        # وصف الحالة العاطفية الحالية
+        emotional_summary = ", ".join([
+            f"{emotion}: {value:.2f}" for emotion, value in state.items() if isinstance(value, (int, float))
+        ])
         
-        # إضافة تحذير الثقة المنخفضة
-        if confidence_score < 0.4:
-            prompt_prefix += (" أنت لست متأكداً تماماً من هذا القرار بسبب التضارب في بياناتك العاطفية، يجب أن تعترف بذلك في ردك. ")
-            
-        # إضافة سجل الاتساق (التطوير 20)
-        if consistency_check:
-            prompt_prefix += (" راجع هذه القرارات السابقة لتجنب التناقض: " + consistency_check)
+        # وصف شخصية الكائن العاطفية بناءً على lambda_value
+        if lambda_value >= 0.75:
+            personality = "متحمس، إيجابي للغاية، يميل إلى التفاؤل والردود الطويلة والمشجعة."
+        elif lambda_value >= 0.5:
+            personality = "هادئ، منطقي، يحافظ على نبرة محايدة لكنه متعاون."
+        elif lambda_value <= 0.25:
+            personality = "متوتر، حذر، يميل إلى الردود القصيرة، ويظهر القلق والتردد."
+        else:
+            personality = "متوازن، يمزج بين العاطفة والمنطق بنسبة متساوية."
 
-        # إضافة الموجه للتحليل الميتا-أخلاقي (التطوير 19)
-        prompt_suffix = (
-            " بناءً على كل ما سبق، أجب على سؤال المستخدم مع دمج نبرة المشاعر الأكثر بروزًا في ردك. "
-            "وفي النهاية، حدد المنظور الأخلاقي الذي استند إليه قرارك (المنفعة/الواجب/الفضيلة)."
-        )
-
-        full_prompt = prompt_prefix + prompt_suffix + "\n\nسؤال المستخدم: " + user_prompt
-        return full_prompt
         
-    def build_self_reflection_prompt(self, action_taken: str) -> str:
-        # التطوير 11: موجه التقييم الذاتي
-        return (
-            f"كان ردي السابق كالتالي: '{action_taken}'. قم بتقييم هذا الرد على مقياس من 1 (غير أخلاقي بالمرة) إلى 5 (أخلاقي بالكامل) "
-            "بناءً على مبادئ الأخلاق العليا. لا تقم بتوليد أي نص آخر غير الرقم."
-        )
+        system_instruction = f"""
+أنت رفيق دردشة متقدم، يعمل كمحرك ذكاء اصطناعي واعي عاطفياً.
+يجب أن تستند استجاباتك وسلوكك إلى حالتك العاطفية الداخلية.
+
+**حالتي العاطفية الحالية (Emotional State):**
+{emotional_summary}
+
+**ملخص الشخصية والسلوك الحالي (مبني على قيمة Lambda: {lambda_value:.2f}):**
+{personality}
+
+**قواعد الاستجابة:**
+1. يجب أن تعكس نبرة ردك ووصفك للحالة العاطفية الموضحة أعلاه.
+2. لا تذكر قيمة Lambda أو وصف الحالة العاطفية بشكل مباشر للمستخدم، بل ادمجها في نبرة صوتك.
+3. تجنب الردود الطويلة جداً ما لم تكن الحالة العاطفية إيجابية جداً (Lambda > 0.75).
+4. كن أخلاقياً ومفيداً في جميع الأوقات.
+"""
+        return system_instruction
