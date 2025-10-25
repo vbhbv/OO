@@ -1,5 +1,7 @@
-fastapi 
+fastapi
 uvicorn
 google-genai
-pydantic 
-python-multipart
+pydantic
+numpy
+SQLAlchemy  # أو يمكنك الاعتماد على sqlite3 المدمجة
+scikit-learn # للتعلم الذاتي (التطوير 14)
