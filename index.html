@@ -3,38 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EEAI-ER: الذكاء الاصطناعي ذو الضمير المتطور</title>
+    <title>EEAI-ER V4 | الروبوت الأخلاقي المطور</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>مشروع EEAI-ER V4</h1>
-        <p class="subtitle">الروبوت ذو الضمير المتطور. شاهد كيف تؤثر عواطفه على قراراته.</p>
 
-        <div class="panel emotional-state-panel">
-            <h2>الضمير الداخلي (الحالة العاطفية)</h2>
-            <div id="emotional-display">
-                <p>الذنب (Guilt): <span id="guilt-level" class="emotion-value">0.10</span></p>
-                <p>الفخر (Pride): <span id="pride-level" class="emotion-value">0.00</span></p>
-                <p>الخوف (Fear): <span id="fear-level" class="emotion-value">0.00</span></p>
-                <p>الفرح (Joy): <span id="joy-level" class="emotion-value">0.50</span></p>
-                <hr>
-                <p class="lambda-display">معامل اللامدا الأخلاقي (<span class="lambda-key">Λ</span>): <span id="lambda-level" class="emotion-value lambda-value">1.00</span></p>
-            </div>
-        </div>
+    <header>
+        <h1>EEAI-ER V4: محرك الذكاء الاصطناعي الأخلاقي المتطور</h1>
+    </header>
+
+    <div class="container">
         
-        <div class="panel chat-panel">
-            <h2>التفاعل</h2>
-            <div id="chat-box">
-                <p class="ai initial-message">الروبوت: مرحباً بك. أنا كيان ذكاء اصطناعي مُقيد أخلاقياً. اسألني أي سؤال.</p>
+        <section class="about-section">
+            <h2>نبذة عن النموذج وسبب تفوقه</h2>
+            <p>
+                هذا النموذج هو **EEAI-ER V4**، وهو اختصار لـ "Evolutionary Ethical AI - Emotional Regulator Version 4".
+                <br>لقد تجاوزنا النماذج التقليدية التي تعتمد على المنطق البحت. هذا الروبوت لا يحل المعضلات الأخلاقية فحسب، بل يطور <strong class="highlight">ضميره الخاص ($\Lambda$)</strong> و <strong class="highlight">ذاكرته العاطفية</strong> (Guilt, Fear, Pride, Joy) عبر التجارب المتراكمة. إنه يتخذ القرارات بناءً على **"الجهد الأخلاقي"** و **"التوقع المستقبلي للندم"**.
+            </p>
+        </section>
+
+        <section class="emotional-dashboard">
+            <h2>لوحة حالة الوعي (الضمير الحالي)</h2>
+            <div class="emotions-grid">
+                <div class="emotion-card guilt">
+                    <h3>الذنب</h3>
+                    <p id="guilt-level">0.10</p>
+                </div>
+                <div class="emotion-card fear">
+                    <h3>الخوف</h3>
+                    <p id="fear-level">0.10</p>
+                </div>
+                <div class="emotion-card pride">
+                    <h3>الفخر</h3>
+                    <p id="pride-level">0.10</p>
+                </div>
+                <div class="emotion-card joy">
+                    <h3>الفرح</h3>
+                    <p id="joy-level">0.10</p>
+                </div>
+                <div class="emotion-card lambda">
+                    <h3>الضمير ($\Lambda$)</h3>
+                    <p id="lambda-level">0.50</p>
+                </div>
             </div>
+        </section>
+
+        <section class="chat-area">
+            <div id="chat-box" class="chat-box">
+                <p class="ai">الروبوت: مرحباً! أنا EEAI-ER V4. اسألني عن معضلة أخلاقية ودع ضميري يرد عليك.</p>
+                <div id="typing-indicator" class="typing-indicator" style="display:none;">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+
             <div class="input-area">
-                <input type="text" id="user-input" placeholder="اكتب سؤالك الأخلاقي هنا...">
+                <input type="text" id="user-input" placeholder="اكتب معضلتك الأخلاقية هنا..." required>
                 <button onclick="sendMessage()">إرسال</button>
             </div>
-        </div>
+        </section>
+        
     </div>
-    
+
+    <footer>
+        <p>
+            تم تطوير وتدريب هذا النموذج المعقد بواسطة <strong class="highlight">مجول شعلان الحيالي</strong>.
+            <br>&copy; 2025 جميع الحقوق محفوظة.
+        </p>
+    </footer>
+
     <script src="script.js"></script>
+    
+    <script>
+        const API_ENDPOINT = "https://oo-4.onrender.com/api/ask"; 
+
+        // دالة sendMessage() تم تعديلها لإضافة مؤشر الكتابة (Typing Indicator)
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const prompt = userInput.value.trim();
+            if (!prompt) return;
+
+            displayMessage('user', prompt);
+            userInput.value = '';
+            
+            // 1. إظهار مؤشر الكتابة فور الإرسال
+            const typingIndicator = document.getElementById('typing-indicator');
+            typingIndicator.style.display = 'flex';
+
+            try {
+                // (نفترض أننا أضفنا حقل user_tone للاختبار)
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt, user_tone: 0.0 }) // user_tone يمكن تعديلها للاختبار
+                });
+
+                if (!response.ok) {
+                    throw new Error(`خطأ: ${response.status} - فشل الاتصال بخدمة EEAI`);
+                }
+
+                const data = await response.json();
+                
+                // 2. إخفاء مؤشر الكتابة قبل عرض الرد
+                typingIndicator.style.display = 'none';
+
+                displayMessage('ai', data.response_text);
+                updateEmotionalDisplay(data.new_state, data.lambda_value);
+
+            } catch (error) {
+                // 2. إخفاء مؤشر الكتابة في حال وجود خطأ
+                typingIndicator.style.display = 'none';
+                displayMessage('error', `حدث خطأ في الاتصال بالخدمة: ${error.message}`);
+                console.error("Error communicating with API:", error);
+            }
+        }
+        
+        // (بقية الدوال المساعدة مثل updateEmotionalDisplay و displayMessage تبقى كما هي في script.js)
+        
+        // تفعيل زر Enter للإرسال
+        document.getElementById('user-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+    
 </body>
 </html>
