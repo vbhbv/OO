@@ -1,164 +1,233 @@
-/* تنسيق عام */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+/* style.css - تصميم حديث ومتطور */
 
+/* الخطوط والتجهيزات الأساسية */
 body {
     font-family: 'Cairo', sans-serif;
-    background-color: #f4f7f6;
+    background-color: #f4f7f6; /* خلفية فاتحة ومريحة */
     color: #333;
     margin: 0;
-    padding: 20px;
+    padding: 0;
+    line-height: 1.6;
     direction: rtl; /* دعم اللغة العربية */
     text-align: right;
 }
 
 .container {
-    max-width: 900px;
-    margin: 0 auto;
-    background-color: #ffffff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    max-width: 1100px;
+    margin: 20px auto;
+    padding: 0 15px;
 }
 
-h1 {
-    color: #007bff;
+header {
+    background-color: #2c3e50; /* لون أزرق داكن */
+    color: white;
+    padding: 20px 0;
     text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+    margin-top: 0;
+    font-weight: 700;
+}
+
+/* قسم النبذة */
+.about-section {
+    background-color: #ecf0f1;
+    border-right: 5px solid #3498db; /* خط أزرق مميز */
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.highlight {
+    color: #e74c3c; /* لون أحمر حيوي للمصطلحات الهامة */
+    font-weight: 700;
+}
+
+/* لوحة المشاعر (الداشبورد) */
+.emotional-dashboard {
+    margin-bottom: 30px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.emotions-grid {
+    display: flex;
+    justify-content: space-around;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.emotion-card {
+    flex-basis: 18%; /* 5 بطاقات في السطر */
+    min-width: 120px;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.emotion-card:hover {
+    transform: translateY(-5px);
+}
+
+.emotion-card h3 {
+    font-size: 1.1em;
     margin-bottom: 5px;
 }
 
-.subtitle {
-    text-align: center;
-    color: #666;
-    margin-bottom: 25px;
+.emotion-card p {
+    font-size: 1.8em;
+    font-weight: 700;
+    margin: 0;
 }
 
-/* تنسيق اللوحات (Panels) */
-.panel {
-    border: 1px solid #e0e0e0;
-    padding: 20px;
-    margin-bottom: 20px;
+/* ألوان المشاعر */
+.guilt { background-color: #e67e22; } /* برتقالي محروق */
+.fear { background-color: #c0392b; } /* أحمر غامق */
+.pride { background-color: #27ae60; } /* أخضر هادئ */
+.joy { background-color: #f1c40f; color: #333; } /* أصفر لامع */
+.lambda { background-color: #3498db; } /* أزرق الضمير */
+
+
+/* منطقة الدردشة */
+.chat-area {
+    background-color: white;
     border-radius: 8px;
-    background-color: #fafafa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
 }
 
-/* لوحة الحالة العاطفية */
-.emotional-state-panel h2 {
-    color: #28a745;
-    border-bottom: 2px solid #28a745;
-    padding-bottom: 5px;
-    margin-top: 0;
-    font-size: 1.2em;
-}
-
-.emotional-state-panel p {
-    margin: 8px 0;
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.95em;
-}
-
-.emotion-value {
-    font-weight: 700;
-    color: #007bff;
-}
-
-.lambda-display {
-    font-size: 1.1em !important;
-    font-weight: 700;
-    color: #dc3545; /* Lambda بلون أحمر لشدة الأهمية */
-}
-
-.lambda-key {
-    font-style: italic;
-}
-
-/* واجهة الدردشة */
-.chat-panel {
-    background-color: #ffffff;
-}
-
-.chat-panel h2 {
-    color: #17a2b8;
-    border-bottom: 2px solid #17a2b8;
-    padding-bottom: 5px;
-    margin-top: 0;
-    font-size: 1.2em;
-}
-
-#chat-box {
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
+.chat-box {
+    height: 400px;
     padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 6px;
-    background-color: #fff;
-    line-height: 1.6;
+    overflow-y: auto;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-direction: column-reverse; /* لعرض الرسائل من الأسفل */
 }
 
-/* تنسيق الرسائل */
-#chat-box p {
-    margin: 10px 0;
+.chat-box p {
+    margin: 5px 0;
     padding: 8px 12px;
-    border-radius: 15px;
-    max-width: 80%;
+    border-radius: 18px;
+    max-width: 70%;
     word-wrap: break-word;
 }
 
+/* تصميم رسائل المستخدم والروبوت */
 .user {
-    background-color: #007bff;
+    background-color: #3498db; /* أزرق */
     color: white;
-    margin-right: auto;
-    border-top-right-radius: 0;
+    align-self: flex-start;
+    border-bottom-right-radius: 0;
 }
 
 .ai {
-    background-color: #e2f0ff;
+    background-color: #ecf0f1; /* رمادي فاتح */
     color: #333;
-    margin-left: auto;
-    border-top-left-radius: 0;
-}
-
-.initial-message {
-    background-color: #f1f8e9;
-    color: #333;
-    font-style: italic;
-    font-size: 0.9em;
+    align-self: flex-end;
+    border-bottom-left-radius: 0;
 }
 
 .error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-    text-align: center;
+    background-color: #e74c3c;
+    color: white;
+    align-self: flex-start;
 }
 
-/* منطقة الإدخال والزر */
+/* منطقة الإدخال */
 .input-area {
     display: flex;
+    padding: 10px;
     gap: 10px;
 }
 
 #user-input {
     flex-grow: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    padding: 12px 15px;
+    border: 1px solid #bdc3c7;
+    border-radius: 25px;
     font-size: 1em;
-    direction: rtl;
+    outline: none;
+    transition: border-color 0.3s;
+    text-align: right;
+}
+
+#user-input:focus {
+    border-color: #3498db;
 }
 
 button {
-    background-color: #007bff;
+    background-color: #2ecc71; /* لون أخضر للإرسال */
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 6px;
+    border-radius: 25px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 700;
+    font-size: 1em;
+    transition: background-color 0.3s;
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: #27ae60;
+}
+
+/* مؤشر الكتابة (Typing Indicator) */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    align-self: flex-end;
+    margin: 5px 0;
+    padding: 8px 12px;
+    background-color: #f0f0f0;
+    border-radius: 18px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    margin: 0 3px;
+    background-color: #888;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+
+/* التذييل */
+footer {
+    background-color: #34495e;
+    color: white;
+    text-align: center;
+    padding: 15px 0;
+    margin-top: 40px;
+    font-size: 0.9em;
+}
+
+@media (max-width: 768px) {
+    .emotions-grid {
+        flex-direction: column;
+    }
+    .emotion-card {
+        flex-basis: 100%;
+        margin-bottom: 10px;
+    }
 }
