@@ -5,7 +5,7 @@ import os
 import json 
 import google.genai as genai
 
-# تم تصحيح الاستيراد ليصبح مطلقاً (Absolute Import)
+# استيرادات مطلقة مصححة
 from EmotionalState import EmotionalState 
 from PromptBuilder import PromptBuilder 
 
@@ -19,7 +19,7 @@ class EmotionalEngine:
         self.prompt_builder = PromptBuilder(state_manager)
         self.ethical_weight = self.state.get('ethical_weight', 1.0) # التطوير 15
         
-        # 🟢 تأكيد التصحيح: تهيئة llm_client كمتغير كائن (self)
+        # 🟢 تأكيد التصحيح: تهيئة llm_client كمتغير كائن (self) قبل استخدامه
         self.llm_client = self._initialize_llm_client() 
         
         self.is_simulated = os.environ.get("GEMINI_API_KEY") is None
@@ -34,10 +34,13 @@ class EmotionalEngine:
                 if api_key:
                     return genai.Client(api_key=api_key)
                 else:
+                    # هذه الحالة تعني أن المفتاح غير موجود وسينتقل لوضع المحاكاة
                     print("WARNING: GEMINI_API_KEY is not set. Running in simulation mode.")
+                    self.is_simulated = True # تحديث متغير المحاكاة هنا
                     return None
             except Exception as e:
                 print(f"Error initializing Gemini client: {e}")
+                self.is_simulated = True # تحديث متغير المحاكاة عند الفشل
                 return None
         return None
 
