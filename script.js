@@ -1,14 +1,14 @@
-// **مهم:** يجب تغيير هذا العنوان إلى عنوان URL الفعلي لخدمة Defang بعد النشر.
-// مثال: "https://your-project-name-agent.defang.dev/api/ask";
-const API_ENDPOINT = "https://<Defang-URL>/api/ask"; 
+// **التعديل النهائي:** تم تعيين رابط API إلى خدمة Render المنشورة (مع إضافة المسار الصحيح).
+const API_ENDPOINT = "https://oo-2-akpa.onrender.com/api/ask"; 
 
 function updateEmotionalDisplay(state, lambda_val) {
+    // تحديث قيم المشاعر
     document.getElementById('guilt-level').textContent = state.guilt.toFixed(2);
     document.getElementById('pride-level').textContent = state.pride.toFixed(2);
     document.getElementById('fear-level').textContent = state.fear.toFixed(2);
     document.getElementById('joy-level').textContent = state.joy.toFixed(2);
-    document.getElementById('lambda-level').textContent = lambda_val.toFixed(2); // إضافة عرض Lambda
-    // (يمكنك إضافة منطق لتغيير الألوان بناءً على مستوى المشاعر)
+    // تحديث قيمة معامل اللامدا (الضمير)
+    document.getElementById('lambda-level').textContent = lambda_val.toFixed(2);
 }
 
 function displayMessage(sender, message) {
@@ -43,16 +43,16 @@ async function sendMessage() {
         
         displayMessage('ai', data.response_text);
         
-        // تحديث لوحة المشاعر و Lambda
+        // تحديث لوحة المشاعر و Lambda بناءً على رد الخادم
         updateEmotionalDisplay(data.new_state, data.lambda_value);
 
     } catch (error) {
-        displayMessage('error', `حدث خطأ: ${error.message}`);
+        displayMessage('error', `حدث خطأ في الاتصال بالخدمة: ${error.message}`);
         console.error("Error communicating with API:", error);
     }
 }
 
-// إضافة خيار الضغط على Enter للإرسال
+// تفعيل زر Enter للإرسال
 document.getElementById('user-input').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
         sendMessage();
