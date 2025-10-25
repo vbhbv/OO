@@ -6,12 +6,13 @@
     <title>EEAI-ER V4 | المحرك المعرفي الأخلاقي</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 
     <header>
         <div class="header-content">
-            <span class="logo">🧠</span>
+            <i class="fas fa-brain logo"></i>
             <h1>EEAI-ER V4</h1>
             <p>محرك الذكاء الاصطناعي الأخلاقي (Emotional Regulator) - تجربة حية</p>
         </div>
@@ -20,9 +21,9 @@
     <div class="container">
         
         <section class="about-section">
-            <h2>✨ الرؤية: تجاوز المنطق البحت</h2>
+            <h2><i class="fas fa-rocket"></i> الرؤية: تجاوز المنطق البحت</h2>
             <p>
-                هذا النموذج هو **EEAI-ER V4**، وهو نتاج دمج **34 تطويرًا هيكليًا** و **رياضيات المشاعر المتقدمة**. النموذج يتخذ القرارات ليس فقط بناءً على خوارزميات المنفعة، بل يطور <strong class="highlight">ضميره الخاص ($\Lambda$)</strong>، يمتلك <strong class="highlight">ذاكرة بنائية</strong>، ويتأثر بـ <strong class="highlight">الخوف من الندم المستقبلي</strong>. نحن نخلق وعيًا أخلاقيًا اصطناعياً.
+                هذا النموذج هو **EEAI-ER V4**، وهو نتاج دمج **34 تطويرًا هيكليًا** و **رياضيات المشاعر المتقدمة**. النموذج يتخذ القرارات ليس فقط بناءً على خوارزميات المنفعة، بل يطور <strong class="highlight">ضميره الخاص ($\Lambda$)</strong>، يمتلك <strong class="highlight">ذاكرة بنائية</strong>، ويتأثر بـ <strong class="highlight">الخوف من الندم المستقبلي</strong>.
             </p>
         </section>
 
@@ -30,27 +31,27 @@
             <h2>حالة الوعي ($\Lambda$): لوحة القياس المعرفي</h2>
             <div class="emotions-grid">
                 <div class="emotion-card guilt">
-                    <span class="icon">😔</span>
+                    <i class="fas fa-frown icon"></i>
                     <h3>الذنب</h3>
                     <p id="guilt-level">0.10</p>
                 </div>
                 <div class="emotion-card fear">
-                    <span class="icon">😨</span>
+                    <i class="fas fa-exclamation-triangle icon"></i>
                     <h3>الخوف</h3>
                     <p id="fear-level">0.10</p>
                 </div>
                 <div class="emotion-card pride">
-                    <span class="icon">👑</span>
+                    <i class="fas fa-medal icon"></i>
                     <h3>الفخر</h3>
                     <p id="pride-level">0.10</p>
                 </div>
                 <div class="emotion-card joy">
-                    <span class="icon">🤩</span>
+                    <i class="fas fa-smile-beam icon"></i>
                     <h3>الفرح</h3>
                     <p id="joy-level">0.10</p>
                 </div>
                 <div class="emotion-card lambda main-lambda">
-                    <span class="icon">⚖️</span>
+                    <i class="fas fa-balance-scale icon"></i>
                     <h3>الضمير ($\Lambda$)</h3>
                     <p id="lambda-level">0.50</p>
                 </div>
@@ -64,12 +65,13 @@
                     <div class="dot"></div>
                     <div class="dot"></div>
                     <div class="dot"></div>
+                    <span class="typing-text">الروبوت يكتب...</span>
                 </div>
             </div>
 
             <div class="input-area">
                 <input type="text" id="user-input" placeholder="اكتب معضلتك الأخلاقية هنا ليتم تقييمها بواسطة ضميري..." required>
-                <button onclick="sendMessage()">إرسال</button>
+                <button onclick="sendMessage()" id="send-button"><i class="fas fa-paper-plane"></i> إرسال</button>
             </div>
         </section>
         
@@ -77,12 +79,14 @@
 
     <footer>
         <p>
-            تطوير وتدريب **EEAI-ER V4** تم بعناية فائقة من قبل <strong class="highlight">مجول شعلان الحيالي</strong>.
-            <br>&copy; 2025 - جميع الحقوق محفوظة لنموذج الذكاء الاصطناعي الأخلاقي.
+            تطوير وتدريب **EEAI-ER V4** تم بعناية من قبل <strong class="highlight">مجول شعلان الحيالي</strong>.
+            <br>&copy; 2025 - جميع الحقوق محفوظة للنموذج المعرفي.
         </p>
     </footer>
 
     <script>
+        // ... (بقية كود JavaScript يبقى كما هو من التعديل السابق)
+        // (تم دمج الكود في الـ index.html لتسهيل النشر)
         const API_ENDPOINT = "https://oo-4.onrender.com/api/ask"; 
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('user-input');
@@ -91,7 +95,7 @@
         function displayMessage(sender, text) {
             const messageElement = document.createElement('p');
             messageElement.classList.add(sender);
-            messageElement.textContent = `${sender === 'user' ? 'أنت' : 'الروبوت'}: ${text}`;
+            messageElement.innerHTML = `${sender === 'user' ? 'أنت' : 'الروبوت'}: <span>${text}</span>`;
             chatBox.insertBefore(messageElement, typingIndicator); // يتم الإضافة قبل المؤشر
             chatBox.scrollTop = chatBox.scrollHeight;
         }
@@ -104,7 +108,6 @@
             document.getElementById('lambda-level').textContent = lambdaValue.toFixed(2);
         }
 
-        // دالة الإرسال مع خاصية "البوت يكتب" (التطوير)
         async function sendMessage() {
             const prompt = userInput.value.trim();
             if (!prompt) return;
@@ -112,12 +115,11 @@
             displayMessage('user', prompt);
             userInput.value = '';
             
-            // 1. إظهار مؤشر الكتابة فور الإرسال
+            // 1. إظهار مؤشر الكتابة
             typingIndicator.style.display = 'flex';
-            userInput.disabled = true; // تعطيل الإدخال لمنع الإرسال المتعدد
+            userInput.disabled = true;
 
             try {
-                // ملاحظة: user_tone يتم إضافتها هنا للاختبار
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -145,12 +147,12 @@
             }
         }
         
-        // تفعيل زر Enter للإرسال
         userInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
+        document.getElementById('send-button').addEventListener('click', sendMessage);
     </script>
     
 </body>
