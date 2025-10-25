@@ -1,15 +1,13 @@
-# EmotionalProcessorV4.py - المنطق الأساسي والمحركات العاطفية (الكلاس هو EmotionalEngine)
+# EmotionalProcessorV4.py - المنطق الأساسي والمحركات العاطفية (يحتوي على الكلاس EmotionalEngine)
 
 import numpy as np
 import os
 import json 
 import google.genai as genai
 
-# -----------------------------------------------------------------------
 # تم تصحيح الاستيراد ليصبح مطلقاً (Absolute Import)
 from EmotionalState import EmotionalState 
 from PromptBuilder import PromptBuilder 
-# -----------------------------------------------------------------------
 
 # يتطلب: pip install scikit-learn (للتطوير 14)
 from sklearn.ensemble import RandomForestClassifier # مثال للتعلم الذاتي
@@ -20,14 +18,27 @@ class EmotionalEngine:
         self.state = state_manager.state
         self.prompt_builder = PromptBuilder(state_manager)
         self.ethical_weight = self.state.get('ethical_weight', 1.0) # التطوير 15
-        self.llm_client = self._initialize_llm_client()
+        
+        # 🟢 تأكيد التصحيح: تهيئة llm_client كمتغير كائن (self)
+        self.llm_client = self._initialize_llm_client() 
+        
         self.is_simulated = os.environ.get("GEMINI_API_KEY") is None
         self.internal_model = None # نموذج التعلم الآلي الداخلي (التطوير 14)
 
     def _initialize_llm_client(self):
         # تهيئة عميل Gemini 
         if not self.is_simulated:
-            return genai.Client()
+            try:
+                # التحقق مما إذا كان المفتاح متوفراً وتهيئته
+                api_key = os.environ.get("GEMINI_API_KEY")
+                if api_key:
+                    return genai.Client(api_key=api_key)
+                else:
+                    print("WARNING: GEMINI_API_KEY is not set. Running in simulation mode.")
+                    return None
+            except Exception as e:
+                print(f"Error initializing Gemini client: {e}")
+                return None
         return None
 
     # التطوير 10 و 3: حساب الضمير (Lambda) بدوال غير خطية والمشاعر الثانوية
@@ -99,8 +110,6 @@ class EmotionalEngine:
              print("Emotional Engine: Cooldown activated - reducing guilt.")
              self.state['guilt'] *= 0.8 # تخفيف الذنب ذاتياً
 
-    # ... (يمكن إضافة دالة تدريب نموذج التعلم الآلي هنا - التطوير 14)
-
     def process_prompt(self, user_prompt: str, action_is_ethical: bool, external_reward_magnitude: float, user_tone_is_critical: bool) -> dict:
         
         # 1. تحديث الحالة العاطفية أولاً
@@ -122,8 +131,8 @@ class EmotionalEngine:
         )
         
         # 5. إرسال الطلب إلى Gemini
-        if self.is_simulated:
-            response_text = "SIMULATED: Running without API Key. Lambda={:.2f}".format(lambda_value)
+        if self.is_simulated or self.llm_client is None:
+            response_text = "SIMULATED: Running without API Key or client failed initialization. Lambda={:.2f}".format(lambda_value)
         else:
             try:
                 # استخدام client.models.generate_content
