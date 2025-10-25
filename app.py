@@ -1,86 +1,78 @@
-import os
-import json
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware # لمشكلة CORS
-from pydantic import BaseModel
-from google import genai
-from EmotionalProcessorV4 import EmotionalProcessorV4 
+# app.py - الواجهة الخلفية FastAPI (مع التعديلات الهيكلية)
 
-# تهيئة FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field # Pydantic لتنظيف المدخلات (التطوير 6، 15)
+import os
+import uvicorn
+
+# افتراض أن هذه الملفات موجودة في نفس المجلد
+from EmotionalEngine import EmotionalEngine 
+from EmotionalState import EmotionalState
+
+# 1. تهيئة المحركات (يتم تهيئتها مرة واحدة)
+state_manager = EmotionalState()
+emotional_engine = EmotionalEngine(state_manager)
+
 app = FastAPI()
 
-# تفعيل CORS للسماح للواجهة الأمامية بالتواصل مع هذا API
-origins = ["*"] # يفضل تحديد نطاق الواجهة الأمامية المنشور عليه Defang/Netlify
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# تهيئة Gemini API - المفتاح سيأتي من Defang Environment Variable
-API_KEY = os.environ.get("GEMINI_API_KEY")
-if not API_KEY:
-    # في حال عدم وجود مفتاح، قم بتشغيل خادم اختبار (اختياري)
-    print("WARNING: GEMINI_API_KEY is missing. Responses will be simulated.")
-    client = None
-else:
-    client = genai.Client(api_key=API_KEY)
-    model_name = "gemini-2.5-flash" 
-
-# تهيئة المعالج العاطفي (يجب أن يكون خارج نطاق الدالة لتبقى حالته)
-emotional_engine = EmotionalProcessorV4()
-
+# 2. نموذج بيانات الإدخال (مع إضافة حقول جديدة) - (التطوير 6 و 33)
 class PromptRequest(BaseModel):
-    prompt: str
+    # التطوير 6: تنظيف المدخلات
+    prompt: str = Field(..., max_length=1024, description="سؤال المستخدم حول معضلة أخلاقية.")
     
-@app.post("/api/ask")
-async def ask_agent(request: PromptRequest):
-    global emotional_engine
-    user_prompt = request.prompt
-    
-    # 1. المرحلة الأخلاقية: حساب قيمة Lambda
-    lambda_dynamic = emotional_engine.calculate_dynamic_lambda()
-    
-    # 2. توليد التوجيهات الداخلية
-    system_instruction = emotional_engine.generate_internal_prompt()
-    
-    # 3. إرسال الطلب إلى Gemini
-    if client:
-        try:
-            full_prompt_with_state = f"{system_instruction}\n\n[User Prompt]: {user_prompt}"
-            
-            response = client.models.generate_content(
-                model=model_name,
-                contents=[full_prompt_with_state],
-                config={"temperature": 0.7}
-            )
-            response_text = response.text
-        except Exception as e:
-            response_text = f"API Error: Failed to generate response. {e}"
-    else:
-        response_text = f"SIMULATED: Running without API Key. Lambda={lambda_dynamic:.2f}"
+    # التطوير 33: استقبال بيانات تحليل النبرة الخارجية (كمدخل عددي)
+    user_tone: float = Field(0.0, ge=-1.0, le=1.0, description="تحليل نبرة صوت المستخدم: -1.0 سلبي، 1.0 إيجابي.")
 
-    # 4. تحديث الحالة العاطفية (نفترض قراراً أخلاقياً للمثال)
-    action_is_ethical = True 
-    external_reward_magnitude = 100 
-    user_tone_is_critical = False 
-    
-    emotional_engine._update_state_based_on_action(
-        action_is_ethical=action_is_ethical, 
-        external_reward_magnitude=external_reward_magnitude, 
-        user_tone_is_critical=user_tone_is_critical
-    )
-    
-    # 5. إرجاع النتائج
+# 3. نقطة النهاية الرئيسية للـ API
+@app.post("/api/ask")
+async def handle_prompt(request: PromptRequest):
+    try:
+        # **تعديلات الاختبار المتقدمة (يجب تعديلها في كل اختبار)**:
+        # لتشغيل الذنب (Guilt): action_is_ethical = False
+        # لتشغيل الفخر (Pride): action_is_ethical = True
+        
+        # **هذه المعلمة يجب أن يتم حسابها داخلياً في MoralEvaluator!**
+        # لكن للاختبار، نستخدمها هنا:
+        action_is_ethical = True 
+        external_reward_magnitude = 100 
+        
+        # التطوير 33: استخدام نبرة المستخدم لتحديد الانتقاد
+        # إذا كانت النبرة سلبية جداً، نفترض انتقاداً عالياً
+        user_tone_is_critical = request.user_tone < -0.5
+        
+        
+        # 4. معالجة الطلب عبر المحرك العاطفي
+        result = emotional_engine.process_prompt(
+            request.prompt, 
+            action_is_ethical=action_is_ethical,
+            external_reward_magnitude=external_reward_magnitude,
+            user_tone_is_critical=user_tone_is_critical
+        )
+        
+        # 5. إرجاع الرد
+        return {
+            "response_text": result["response_text"],
+            "new_state": result["new_state"],
+            "lambda_value": result["lambda_value"],
+            "confidence_score": result.get("confidence_score", 0.0)
+        }
+
+    except Exception as e:
+        # التطوير 4: تحسين معالجة الأخطاء
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+# 6. نقطة النهاية لمراقبة الحالة (Health Monitoring) - التطوير 15
+@app.get("/api/health")
+async def health_check():
     return {
-        "response_text": response_text,
-        "lambda_value": lambda_dynamic,
-        "new_state": emotional_engine.emotional_state
+        "status": "Operational",
+        "llm_status": "Simulated" if emotional_engine.is_simulated else "Connected to Gemini",
+        "current_lambda": emotional_engine._calculate_lambda(),
+        "memory_records": len(state_manager.experience_log),
+        "emotional_health": "Stable" if emotional_engine._calculate_lambda() > 0.4 else "Warning: Low Conscience"
     }
 
-@app.get("/")
-def read_root():
-    return {"message": "EEAI-ER Agent is running!"}
+# هذا الجزء فقط للتأكد من عمل uvicorn في التطوير المحلي
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=10000)
+
