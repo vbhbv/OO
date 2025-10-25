@@ -1,9 +1,10 @@
-fastapi
+المكتبات الأساسية لتطبيق FastAPI
+​fastapi
 uvicorn
-pydantic
-google-generativeai
+​المكتبات المطلوبة للنموذج العاطفي والذكاء الاصطناعي
+​google-generativeai
 numpy
 scikit-learn
-​المكتبات التالية مطلوبة للتشغيل الآمن
-​python-multipart
-aiofiles
+​تبعيات إضافية لضمان عمل Uvicorn و FastAP
+​pydantic
+python-multipart
