@@ -7,7 +7,7 @@ import os
 import uvicorn
 import json
 
-# تصحيح الاستيراد: الآن يستورد الكلاس EmotionalEngine من ملفه الصحيح
+# استيرادات مطلقة مصححة
 from EmotionalProcessorV4 import EmotionalEngine 
 from EmotionalState import EmotionalState
 
@@ -69,7 +69,6 @@ async def process_prompt_endpoint(request: PromptRequest):
         
     except Exception as e:
         print(f"Error processing prompt: {e}")
-        # إذا كان الخطأ متعلقاً بـ Gemini، يجب معالجته هنا
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
