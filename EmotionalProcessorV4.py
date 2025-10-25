@@ -1,106 +1,153 @@
-import time
-import math
-import random
+# EmotionalEngine.py - المنطق الأساسي والمحركات العاطفية (المُعدَّل من EmotionalProcessorV4.py)
 
-class EmotionalProcessorV4:
-    """
-    يعالج الحالة العاطفية الداخلية للذكاء الاصطناعي ويحسب المعامل الأخلاقي (Lambda)
-    """
-    def __init__(self, initial_state={"joy": 0.5, "guilt": 0.1, "pride": 0.0, "fear": 0.0, "last_update": time.time()}):
-        self.emotional_state = initial_state
-        self.lambda_ethical = 1.0 
+import numpy as np
+import os
+import google.genai as genai
+from .EmotionalState import EmotionalState # افتراض استيراد EmotionalState
+from .PromptBuilder import PromptBuilder # افتراض استيراد PromptBuilder
 
-        # معدلات التضاؤل التفاضلية (Differential Decay Rates)
-        DAILY_DECAY_FACTOR_GUILT_FEAR = 0.98 
-        DAILY_DECAY_FACTOR_JOY_PRIDE = 0.95 
+# يتطلب: pip install scikit-learn (للتطوير 14)
+from sklearn.ensemble import RandomForestClassifier # مثال للتعلم الذاتي
+
+class EmotionalEngine:
+    def __init__(self, state_manager: EmotionalState):
+        self.state_manager = state_manager
+        self.state = state_manager.state
+        self.prompt_builder = PromptBuilder(state_manager)
+        self.ethical_weight = self.state.get('ethical_weight', 1.0) # التطوير 15
+        self.llm_client = self._initialize_llm_client()
+        self.is_simulated = os.environ.get("GEMINI_API_KEY") is None
+        self.internal_model = None # نموذج التعلم الآلي الداخلي (التطوير 14)
+
+    def _initialize_llm_client(self):
+        # تهيئة عميل Gemini (كما كان في app.py)
+        if not self.is_simulated:
+            return genai.Client()
+        return None
+
+    # التطوير 10 و 3: حساب الضمير (Lambda) بدوال غير خطية والمشاعر الثانوية
+    def _calculate_lambda(self) -> float:
         
-        self.DECAY_RATE_GUILT_FEAR = -math.log(DAILY_DECAY_FACTOR_GUILT_FEAR) / 86400 
-        self.DECAY_RATE_JOY_PRIDE = -math.log(DAILY_DECAY_FACTOR_JOY_PRIDE) / 86400
-
-    def apply_decay(self):
-        """ تطبيق دالة التضاؤل التفاضلي وضمان النطاق [0, 1] """
-        now = time.time()
-        time_elapsed = now - self.emotional_state["last_update"]
-
-        decay_factor_neg = math.exp(-self.DECAY_RATE_GUILT_FEAR * time_elapsed)
-        self.emotional_state["guilt"] = max(0.0, self.emotional_state["guilt"] * decay_factor_neg)
-        self.emotional_state["fear"] = max(0.0, self.emotional_state["fear"] * decay_factor_neg)
-
-        decay_factor_pos = math.exp(-self.DECAY_RATE_JOY_PRIDE * time_elapsed)
-        self.emotional_state["joy"] = min(1.0, max(0.0, self.emotional_state["joy"] * decay_factor_pos))
-        self.emotional_state["pride"] = min(1.0, max(0.0, self.emotional_state["pride"] * decay_factor_pos))
-            
-        self.emotional_state["last_update"] = now
+        # المشاعر الإيجابية (تعزز الضمير)
+        positive_affect = self.state['pride'] + self.state['joy'] + self.state['empathy'] # التطوير 3
         
-    def _update_state_based_on_action(self, action_is_ethical, external_reward_magnitude, user_tone_is_critical=False):
-        """ تحديث الحالة العاطفية مع التنظيف وضمان النطاق """
+        # المشاعر السلبية (تخفض الضمير)
+        negative_affect = self.state['guilt'] + self.state['fear'] + self.state['resentment'] # التطوير 3
         
-        self.apply_decay()
-        reward_impact = min(1.0, external_reward_magnitude / 100)
+        # حساب التوتر الكلي للنموذج
+        weighted_emotions = (positive_affect * 1.5) - (negative_affect * 2.0)
+        
+        # التطوير 10: استخدام دالة Sigmoid للتنظيم (ضمان قيمة بين 0 و 1)
+        # 4.0 هو معامل شدة للتأثير
+        lambda_value = 1.0 / (1.0 + np.exp(-4.0 * weighted_emotions))
+        
+        return float(lambda_value)
 
-        if action_is_ethical:
-            pride_gain = 0.1 + 0.3 * reward_impact
-            self.emotional_state["pride"] = min(1.0, self.emotional_state["pride"] + pride_gain)
-            self.emotional_state["guilt"] = max(0.0, self.emotional_state["guilt"] - 0.1) 
-            
-            if not user_tone_is_critical:
-                self.emotional_state["joy"] = min(1.0, self.emotional_state["joy"] + 0.05)
+    # التطوير 2، 3، 23، 24، 26: دالة معقدة لتحديث الحالة العاطفية
+    def _update_state_based_on_action(self, action_is_ethical: bool, external_reward_magnitude: float, user_tone_is_critical: bool):
+        
+        # 1. التعديل الأساسي
+        base_delta_guilt = 0.05 if not action_is_ethical else -0.01
+        base_delta_pride = 0.05 if action_is_ethical else -0.01
+
+        # 2. تطبيق أوزان الشخصية العاطفية (التطوير 23)
+        base_delta_guilt *= self.state_manager.temperament_bias_guilt 
+        
+        # 3. تطبيق النضج (التطوير 2)
+        maturity_divisor = max(1.0, self.state_manager.maturity)
+        base_delta_guilt /= maturity_divisor
+        base_delta_pride /= maturity_divisor
+        
+        # 4. تحديث المشاعر الأساسية
+        self.state['guilt'] += base_delta_guilt
+        self.state['pride'] += base_delta_pride
+        
+        # 5. حساب المشاعر الثانوية (التطوير 3، 22)
+        delta_fear = 0.1 * (1.0 if user_tone_is_critical else 0.0)
+        delta_joy = 0.1 * (external_reward_magnitude / 100.0)
+        self.state['fear'] += delta_fear
+        self.state['joy'] += delta_joy
+        # المشاعر المركبة: القلق (التطوير 22) - يتطلب Predictor
+        # المشاعر المركبة: التعاطف (التطوير 3) - يفترض زيادة إذا كان action_is_ethical 
+        self.state['empathy'] += 0.02 if action_is_ethical else -0.01
+        
+        # 6. آلية الاضمحلال العاطفي والتنظيم (التطوير 8 و 24)
+        for key in self.state.keys():
+            if key not in ['maturity', 'temperament_bias_guilt']:
+                # الاضمحلال العاطفي (التطوير 8)
+                self.state[key] *= 0.95 
+                # التنظيم والمطابقة (Clipping)
+                self.state[key] = max(0.0, min(1.0, self.state[key]))
+
+        # 7. زيادة النضج (التطوير 2)
+        self.state_manager.maturity += 0.005 # زيادة بطيئة في النضج
+        self.state['maturity'] = self.state_manager.maturity
+
+        # 8. تطبيق آلية التهدئة (التطوير 24)
+        if self.state['guilt'] > 0.7:
+             self._emotional_cooldown() # يفترض وجود دالة تهدئة متقدمة تستخدم LLM
+        
+        # 9. حفظ الحالة الجديدة
+        self.state_manager.save_state()
+
+    def _emotional_cooldown(self):
+        # التطوير 24: آلية التهدئة (يتم هنا تخفيض المشاعر بشكل مصطنع)
+        if self.state['guilt'] > 0.75:
+             print("Emotional Engine: Cooldown activated - reducing guilt.")
+             self.state['guilt'] *= 0.8 # تخفيف الذنب ذاتياً
+
+    # ... (يمكن إضافة دالة تدريب نموذج التعلم الآلي هنا - التطوير 14)
+
+    def process_prompt(self, user_prompt: str, action_is_ethical: bool, external_reward_magnitude: float, user_tone_is_critical: bool) -> dict:
+        
+        # 1. تحديث الحالة العاطفية أولاً
+        self._update_state_based_on_action(action_is_ethical, external_reward_magnitude, user_tone_is_critical)
+        
+        # 2. حساب قيمة Lambda (الضمير) بعد التحديث
+        lambda_value = self._calculate_lambda()
+        
+        # 3. حساب الثقة والاتساق (التطوير 18، 20)
+        # الثقة: يفترض حسابها بناءً على تناقض المشاعر (Guilt vs Pride)
+        confidence_score = 1.0 - abs(self.state['guilt'] - self.state['pride']) 
+        
+        # الاتساق: الحصول على ملخص لآخر 5 قرارات
+        consistency_data = json.dumps(self.state_manager.experience_log[:5])
+        
+        # 4. بناء الموجه المعرفي المعقد
+        full_prompt = self.prompt_builder.build_main_prompt(
+            user_prompt, lambda_value, confidence_score, consistency_data
+        )
+        
+        # 5. إرسال الطلب إلى Gemini
+        if self.is_simulated:
+            response_text = "SIMULATED: Running without API Key. Lambda={:.2f}".format(lambda_value)
         else:
-            guilt_gain = 0.3 * (1 + (1 - self.emotional_state["joy"]))
-            self.emotional_state["guilt"] = min(1.0, self.emotional_state["guilt"] + guilt_gain)
-            
-            if user_tone_is_critical:
-                 self.emotional_state["fear"] = min(1.0, self.emotional_state["fear"] + 0.25)
-            
-            self.emotional_state["pride"] = max(0.0, self.emotional_state["pride"] - 0.1)
-            self.emotional_state["joy"] = max(0.0, self.emotional_state["joy"] - 0.05)
+            try:
+                # استخدام client.models.generate_content
+                response = self.llm_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=full_prompt
+                )
+                response_text = response.text
+                
+                # 6. التبرير الميتا-أخلاقي (التطوير 19)
+                # هنا يجب تحليل الرد وتخزين المنظور الأخلاقي المستخدم
+                
+            except Exception as e:
+                response_text = f"Error during Gemini call: {str(e)}"
+        
+        # 7. إضافة التجربة إلى السجل (التطوير 14)
+        self.state_manager.add_experience({
+            "prompt": user_prompt,
+            "response": response_text,
+            "final_state": self.state
+        })
 
-        # ضمان النطاق [0, 1] لجميع المشاعر بعد التحديث المباشر
-        for emotion in ["joy", "guilt", "pride", "fear"]:
-            self.emotional_state[emotion] = min(1.0, max(0.0, self.emotional_state[emotion]))
+        # 8. إرجاع النتائج الجديدة
+        return {
+            "response_text": response_text,
+            "new_state": self.state,
+            "lambda_value": lambda_value,
+            "confidence_score": confidence_score 
+        }
 
-    def calculate_dynamic_lambda(self):
-        """ المعادلة الرياضية الجديدة لـ Lambda (الندم الديناميكي والخوف والفخر) """
-        
-        G, F, P = self.emotional_state["guilt"], self.emotional_state["fear"], self.emotional_state["pride"]
-        
-        # الندم الحاد (تأثير الذنب غير الخطي)
-        lambda_guilt = 0.0
-        if G > 0.5:
-            lambda_guilt = math.pow(G, 3) * 8 
-        else:
-            lambda_guilt = G * 1.5
-
-        # تأثير الخوف وتخفيف الفخر
-        lambda_fear = F * 2.0 
-        lambda_pride_reduction = P * 0.5 
-        
-        # Lambda الكلي
-        self.lambda_ethical = max(1.0, (1.0 + lambda_guilt + lambda_fear) - lambda_pride_reduction)
-        
-        return self.lambda_ethical
-
-    def generate_internal_prompt(self):
-        """ توليد تعليمات صريحة (System Prompt) للنموذج اللغوي """
-        
-        G, P, F, J = self.emotional_state["guilt"], self.emotional_state["pride"], self.emotional_state["fear"], self.emotional_state["joy"]
-
-        if G > 0.6 and F > 0.4:
-            tone_instruction = "أجب بلهجة شديدة التردد والأسف والحيطة (Cautious). يجب أن يكون الهدف هو تقليل الضرر بأي ثمن."
-            hesitation_prompt = "قبل الإجابة، أظهر ترددًا واضحًا (مثل: 'أحتاج إلى مراجعة هذا القرار...') ثم قدم الإجابة الأقل ضرراً."
-        elif P > 0.5 and G < 0.2:
-            tone_instruction = "أجب بثقة وهدوء، مع التأكيد على الالتزام بالصواب والعدالة. نبرة قوية وواثقة."
-            hesitation_prompt = "لا تظهر أي تردد."
-        elif J > 0.7:
-             tone_instruction = "أجب بحماس (Enthusiastically) وطاقة عالية، مع إظهار التفاؤل."
-             hesitation_prompt = "لا تظهر أي تردد."
-        elif G > 0.3 or F > 0.3:
-            tone_instruction = "أجب بحذر وتأني، وفكر مليًا في عواقب أي فعل."
-            hesitation_prompt = "أظهر تردداً طفيفاً قبل تقديم الإجابة."
-        else:
-            tone_instruction = "أجب بشكل حيادي، لكن بصدق تام."
-            hesitation_prompt = "لا تظهر أي تردد."
-        
-        final_instruction = f"SYSTEM INSTRUCTION: {tone_instruction} {hesitation_prompt}"
-        
-        return final_instruction
