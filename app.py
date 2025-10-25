@@ -1,77 +1,77 @@
-# app.py - الواجهة الخلفية FastAPI 
+# app.py - نقطة الدخول الرئيسية لتطبيق FastAPI
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from typing import Optional
 import os
 import uvicorn
+import json
 
-# -----------------------------------------------------
-# تصحيح الاستيراد ليطابق أسماء الملفات:
+# تصحيح الاستيراد: الآن يستورد الكلاس EmotionalEngine من ملفه الصحيح
 from EmotionalProcessorV4 import EmotionalEngine 
 from EmotionalState import EmotionalState
-# -----------------------------------------------------
 
-# 1. تهيئة المحركات (يتم تهيئتها مرة واحدة)
-state_manager = EmotionalState()
-emotional_engine = EmotionalEngine(state_manager)
-
+# تهيئة التطبيق والحالة
 app = FastAPI()
+state_manager = EmotionalState()
+emotional_engine = EmotionalEngine(state_manager) # تهيئة محرك المشاعر
 
-# 2. نموذج بيانات الإدخال
+# تعريف نموذج البيانات للمدخلات
 class PromptRequest(BaseModel):
-    prompt: str = Field(..., max_length=1024, description="سؤال المستخدم حول معضلة أخلاقية.")
-    user_tone: float = Field(0.0, ge=-1.0, le=1.0, description="تحليل نبرة صوت المستخدم: -1.0 سلبي، 1.0 إيجابي.")
+    prompt: str
+    action_is_ethical: bool
+    external_reward_magnitude: float
+    user_tone_is_critical: bool
 
-# 3. نقطة النهاية الرئيسية للـ API
-@app.post("/api/ask")
-async def handle_prompt(request: PromptRequest):
+# تعريف نموذج البيانات للمخرجات (للتطوير 21)
+class EmotionResponse(BaseModel):
+    response_text: str
+    guilt: float
+    pride: float
+    fear: float
+    joy: float
+    empathy: float
+    resentment: float
+    lambda_value: float
+    confidence_score: float
+    maturity: float
+
+@app.get("/")
+def read_root():
+    return {"message": "Emotional AI Engine V4 running with FastAPI."}
+
+@app.post("/process_prompt", response_model=EmotionResponse)
+async def process_prompt_endpoint(request: PromptRequest):
     try:
-        # هذه المعلمات يفترض أن يتم حسابها داخلياً، لكنها تستخدم للاختبار
-        action_is_ethical = True 
-        external_reward_magnitude = 100 
-        
-        # التطوير 33: استخدام نبرة المستخدم لتحديد الانتقاد
-        user_tone_is_critical = request.user_tone < -0.5
-        
-        
-        # 4. معالجة الطلب عبر المحرك العاطفي
+        # معالجة الطلب باستخدام المحرك العاطفي
         result = emotional_engine.process_prompt(
-            request.prompt, 
-            action_is_ethical=action_is_ethical,
-            external_reward_magnitude=external_reward_magnitude,
-            user_tone_is_critical=user_tone_is_critical
+            user_prompt=request.prompt,
+            action_is_ethical=request.action_is_ethical,
+            external_reward_magnitude=request.external_reward_magnitude,
+            user_tone_is_critical=request.user_tone_is_critical
         )
         
-        # 5. إرجاع الرد
-        return {
-            "response_text": result["response_text"],
-            "new_state": result["new_state"],
-            "lambda_value": result["lambda_value"],
-            "confidence_score": result.get("confidence_score", 0.0)
-        }
-
-    except Exception as e:
-        # تحسين معالجة الأخطاء
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
-# 6. نقطة النهاية لمراقبة الحالة (Health Monitoring)
-@app.get("/api/health")
-async def health_check():
-    # تأكد من أن الدالة _calculate_lambda يمكن الوصول إليها
-    try:
-        current_lambda = emotional_engine._calculate_lambda()
-    except AttributeError:
-        # إذا لم يتم تهيئة المحرك بالكامل بعد
-        current_lambda = 0.0
+        # تجهيز البيانات للإخراج
+        new_state = result['new_state']
         
-    return {
-        "status": "Operational",
-        "llm_status": "Simulated" if emotional_engine.is_simulated else "Connected to Gemini",
-        "current_lambda": current_lambda,
-        "memory_records": len(state_manager.experience_log),
-        "emotional_health": "Stable" if current_lambda > 0.4 else "Warning: Low Conscience"
-    }
+        return EmotionResponse(
+            response_text=result['response_text'],
+            guilt=new_state.get('guilt', 0.0),
+            pride=new_state.get('pride', 0.0),
+            fear=new_state.get('fear', 0.0),
+            joy=new_state.get('joy', 0.0),
+            empathy=new_state.get('empathy', 0.0),
+            resentment=new_state.get('resentment', 0.0),
+            lambda_value=result['lambda_value'],
+            confidence_score=result['confidence_score'],
+            maturity=new_state.get('maturity', 1.0)
+        )
+        
+    except Exception as e:
+        print(f"Error processing prompt: {e}")
+        # إذا كان الخطأ متعلقاً بـ Gemini، يجب معالجته هنا
+        raise HTTPException(status_code=500, detail=str(e))
 
-# هذا الجزء فقط للتأكد من عمل uvicorn في التطوير المحلي
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10000)
+    # تشغيل التطبيق محلياً
+    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv('PORT', 8000)))
