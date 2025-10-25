@@ -3,37 +3,49 @@
 import sqlite3
 import json
 import time
+from typing import Dict, Any
 
 class EmotionalState:
-    
-    def __init__(self, db_path='emotions.db'):
-        self.db_path = db_path
-        self._initialize_db()
-        self.state = self._load_state()
-        
-        # التطوير 23: تحيز المزاج (للتأثير على المشاعر)
-        self.temperament_bias_guilt = self.state.get('temperament_bias_guilt', 1.2) 
-        
-        # التطوير 2: قيمة النضج (maturity)
-        self.maturity = self.state.get('maturity', 1.0)
-        
-        # التطوير 14: سجل التجارب
-        self.experience_log = self._load_log() 
+    """تدير تخزين حالة الكائن العاطفية في قاعدة بيانات SQLite."""
 
-    def _initialize_db(self):
-        # التطوير 1: إنشاء قاعدة بيانات SQLite بسيطة لتخزين الحالة الدائمة
+    def __init__(self, db_path: str = 'emotions.db'):
+        """تهيئة الكلاس وتحميل الحالة الحالية من DB أو تهيئتها."""
+        self.db_path = db_path
+        self.initialize_db()
+        self.state = self.load_state()
+
+        # القيم الافتراضية
+        initial_state = {
+            'temperament_bias': 0.5, # الانحياز المزاجي (ثابت عادة)
+            'maturity': 1.0,         # النضج (يزداد بمرور الوقت)
+            'joy': 0.5,
+            'fear': 0.0,
+            'calm': 0.5,
+            'anxiety': 0.0,
+            'pride': 0.0,
+            'guilt': 0.0,
+            # يمكن إضافة المزيد من المشاعر هنا
+        }
+        
+        # تحميل الحالة أو استخدام الافتراضيات
+        if not self.state:
+            self.state = initial_state
+            self.save_state(self.state) # حفظ الحالة الأولية
+
+    def initialize_db(self):
+        """التطور 1: إنشاء قاعدة بيانات وتهيئة الجدول الرئيسي."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # جدول لتخزين الحالة (Guilt, Pride, etc.)
+        # جدول 'state' لتخزين بيانات الحالة الرئيسية (قيمة واحدة لكل مفتاح)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS state (
                 key TEXT PRIMARY KEY,
                 value TEXT
             )
         """)
-        
-        # جدول لتخزين سجل التجارب (الذاكرة)
+
+        # جدول 'log' لتسجيل التفاعلات (اختياري)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS log (
                 id INTEGER PRIMARY KEY,
@@ -44,102 +56,61 @@ class EmotionalState:
         
         conn.commit()
         conn.close()
-        
-        # ضمان وجود حالة افتراضية عند الإنشاء لأول مرة
-        initial_state = {
-            'guilt': 0.1, 
-            'pride': 0.2,
-            'fear': 0.05, 
-            'joy': 0.1,    
-            'empathy': 0.5, 
-            'resentment': 0.0, 
-            'maturity': 1.0,
-            'temperament_bias_guilt': 1.2
-        }
-        
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # إدخال القيم الافتراضية إذا لم تكن موجودة
-        for key, value in initial_state.items():
-            cursor.execute("SELECT key FROM state WHERE key=?", (key,))
-            if cursor.fetchone() is None:
-                cursor.execute("INSERT INTO state (key, value) VALUES (?, ?)", (key, str(value)))
-                
-        conn.commit()
-        conn.close()
 
-    def _load_state(self) -> dict:
-        # تحميل الحالة العاطفية من قاعدة البيانات
+    def load_state(self) -> Dict[str, float]:
+        """تحميل الحالة العاطفية من قاعدة بيانات SQLite."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT key, value FROM state")
-        rows = cursor.fetchall()
+        
+        rows = cursor.execute("SELECT key, value FROM state").fetchall()
         conn.close()
         
-        state = {}
+        state: Dict[str, float] = {}
+        if not rows:
+            return {}
+
         for key, value_str in rows:
-            # محاولة تحويل القيمة إلى float
             try:
+                # محاولة تحويل القيمة إلى Float
                 state[key] = float(value_str)
             except ValueError:
-                state[key] = value_str # إذا لم يكن رقماً
-                
+                # إذا لم يكن رقمًا، يمكن تخزينه كسلسلة أو تجاهله
+                state[key] = value_str # يجب أن تكون معظم قيمنا Float
+        
         return state
 
-    def save_state(self):
-        # حفظ الحالة العاطفية الحالية في قاعدة البيانات
+    def save_state(self, new_state: Dict[str, Any]):
+        """حفظ الحالة العاطفية في قاعدة بيانات SQLite."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        for key, value in self.state.items():
-            # تحويل القيمة إلى نص قبل الحفظ
-            value_str = str(value)
+        for key, value in new_state.items():
+            # تحويل القيمة إلى سلسلة قبل الحفظ
+            value_str = str(value) 
+            
             cursor.execute(
-                "REPLACE INTO state (key, value) VALUES (?, ?)", 
+                "INSERT OR REPLACE INTO state (key, value) VALUES (?, ?)",
                 (key, value_str)
             )
             
         conn.commit()
         conn.close()
-        
-    def _load_log(self) -> list:
-        # تحميل سجل التجارب (آخر 100 سجل)
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT data FROM log ORDER BY timestamp DESC LIMIT 100") 
-        rows = cursor.fetchall()
-        conn.close()
-        
-        log = []
-        for row in rows:
-            try:
-                # البيانات مخزنة كـ JSON
-                log.append(json.loads(row[0])) 
-            except json.JSONDecodeError:
-                continue
-                
-        return log[::-1] # عكس القائمة ليكون الأقدم أولاً
 
-    def add_experience(self, experience: dict):
-        # إضافة تجربة جديدة إلى السجل
+        # تحديث الحالة الداخلية
+        self.state.update(new_state)
+
+    def log_interaction(self, data: Dict[str, Any]):
+        """تسجيل تفاعل المستخدم في جدول log (اختياري)."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # حفظ البيانات كـ JSON
-        data_json = json.dumps(experience)
-        current_time = int(time.time())
+        timestamp = int(time.time())
+        data_json = json.dumps(data)
         
         cursor.execute(
-            "INSERT INTO log (timestamp, data) VALUES (?, ?)", 
-            (current_time, data_json)
+            "INSERT INTO log (timestamp, data) VALUES (?, ?)",
+            (timestamp, data_json)
         )
         
         conn.commit()
         conn.close()
-        
-        # تحديث السجل في الذاكرة
-        self.experience_log.append(experience)
-        # الحفاظ على حجم السجل بحد أقصى 100
-        if len(self.experience_log) > 100:
-            self.experience_log.pop(0)
