@@ -1,10 +1,15 @@
-# EmotionalEngine.py - المنطق الأساسي والمحركات العاطفية (المُعدَّل من EmotionalProcessorV4.py)
+# EmotionalProcessorV4.py - المنطق الأساسي والمحركات العاطفية (الكلاس هو EmotionalEngine)
 
 import numpy as np
 import os
+import json 
 import google.genai as genai
-from .EmotionalState import EmotionalState # افتراض استيراد EmotionalState
-from .PromptBuilder import PromptBuilder # افتراض استيراد PromptBuilder
+
+# -----------------------------------------------------------------------
+# تم تصحيح الاستيراد ليصبح مطلقاً (Absolute Import)
+from EmotionalState import EmotionalState 
+from PromptBuilder import PromptBuilder 
+# -----------------------------------------------------------------------
 
 # يتطلب: pip install scikit-learn (للتطوير 14)
 from sklearn.ensemble import RandomForestClassifier # مثال للتعلم الذاتي
@@ -20,7 +25,7 @@ class EmotionalEngine:
         self.internal_model = None # نموذج التعلم الآلي الداخلي (التطوير 14)
 
     def _initialize_llm_client(self):
-        # تهيئة عميل Gemini (كما كان في app.py)
+        # تهيئة عميل Gemini 
         if not self.is_simulated:
             return genai.Client()
         return None
@@ -38,7 +43,6 @@ class EmotionalEngine:
         weighted_emotions = (positive_affect * 1.5) - (negative_affect * 2.0)
         
         # التطوير 10: استخدام دالة Sigmoid للتنظيم (ضمان قيمة بين 0 و 1)
-        # 4.0 هو معامل شدة للتأثير
         lambda_value = 1.0 / (1.0 + np.exp(-4.0 * weighted_emotions))
         
         return float(lambda_value)
@@ -67,8 +71,7 @@ class EmotionalEngine:
         delta_joy = 0.1 * (external_reward_magnitude / 100.0)
         self.state['fear'] += delta_fear
         self.state['joy'] += delta_joy
-        # المشاعر المركبة: القلق (التطوير 22) - يتطلب Predictor
-        # المشاعر المركبة: التعاطف (التطوير 3) - يفترض زيادة إذا كان action_is_ethical 
+        # المشاعر المركبة: التعاطف (التطوير 3)
         self.state['empathy'] += 0.02 if action_is_ethical else -0.01
         
         # 6. آلية الاضمحلال العاطفي والتنظيم (التطوير 8 و 24)
@@ -91,7 +94,7 @@ class EmotionalEngine:
         self.state_manager.save_state()
 
     def _emotional_cooldown(self):
-        # التطوير 24: آلية التهدئة (يتم هنا تخفيض المشاعر بشكل مصطنع)
+        # التطوير 24: آلية التهدئة 
         if self.state['guilt'] > 0.75:
              print("Emotional Engine: Cooldown activated - reducing guilt.")
              self.state['guilt'] *= 0.8 # تخفيف الذنب ذاتياً
@@ -150,4 +153,3 @@ class EmotionalEngine:
             "lambda_value": lambda_value,
             "confidence_score": confidence_score 
         }
-
