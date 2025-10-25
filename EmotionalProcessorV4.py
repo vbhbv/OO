@@ -3,7 +3,9 @@
 import numpy as np
 import os
 import json 
-import google.genai as genai
+# تم تغيير اسم المكتبة من google.genai إلى google.generativeai 
+# للتأكد من استخدام التسمية الأحدث والأكثر شيوعاً (وإن كان genai يعمل في بعض البيئات)
+import google.generativeai as genai 
 
 # استيرادات مطلقة مصححة
 from EmotionalState import EmotionalState 
@@ -19,10 +21,10 @@ class EmotionalEngine:
         self.prompt_builder = PromptBuilder(state_manager)
         self.ethical_weight = self.state.get('ethical_weight', 1.0) # التطوير 15
         
-        # 🟢 تأكيد التصحيح: تهيئة llm_client كمتغير كائن (self) قبل استخدامه
+        # 💡 التصحيح الحاسم: التأكد من تهيئة llm_client
+        self.is_simulated = os.environ.get("GEMINI_API_KEY") is None
         self.llm_client = self._initialize_llm_client() 
         
-        self.is_simulated = os.environ.get("GEMINI_API_KEY") is None
         self.internal_model = None # نموذج التعلم الآلي الداخلي (التطوير 14)
 
     def _initialize_llm_client(self):
@@ -32,15 +34,15 @@ class EmotionalEngine:
                 # التحقق مما إذا كان المفتاح متوفراً وتهيئته
                 api_key = os.environ.get("GEMINI_API_KEY")
                 if api_key:
+                    # نستخدم genai.Client() مباشرة 
                     return genai.Client(api_key=api_key)
                 else:
-                    # هذه الحالة تعني أن المفتاح غير موجود وسينتقل لوضع المحاكاة
                     print("WARNING: GEMINI_API_KEY is not set. Running in simulation mode.")
-                    self.is_simulated = True # تحديث متغير المحاكاة هنا
+                    self.is_simulated = True 
                     return None
             except Exception as e:
                 print(f"Error initializing Gemini client: {e}")
-                self.is_simulated = True # تحديث متغير المحاكاة عند الفشل
+                self.is_simulated = True 
                 return None
         return None
 
