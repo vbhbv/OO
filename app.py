@@ -6,9 +6,7 @@ import os
 import uvicorn
 
 # -----------------------------------------------------
-# **التعديل هنا:** تصحيح الاستيراد ليطابق أسماء الملفات الموجودة:
-# - EmotionalProcessorV4 يحتوي على الكلاس EmotionalEngine
-# - EmotionalState يحتوي على الكلاس EmotionalState
+# تصحيح الاستيراد ليطابق أسماء الملفات:
 from EmotionalProcessorV4 import EmotionalEngine 
 from EmotionalState import EmotionalState
 # -----------------------------------------------------
@@ -59,12 +57,19 @@ async def handle_prompt(request: PromptRequest):
 # 6. نقطة النهاية لمراقبة الحالة (Health Monitoring)
 @app.get("/api/health")
 async def health_check():
+    # تأكد من أن الدالة _calculate_lambda يمكن الوصول إليها
+    try:
+        current_lambda = emotional_engine._calculate_lambda()
+    except AttributeError:
+        # إذا لم يتم تهيئة المحرك بالكامل بعد
+        current_lambda = 0.0
+        
     return {
         "status": "Operational",
         "llm_status": "Simulated" if emotional_engine.is_simulated else "Connected to Gemini",
-        "current_lambda": emotional_engine._calculate_lambda(),
+        "current_lambda": current_lambda,
         "memory_records": len(state_manager.experience_log),
-        "emotional_health": "Stable" if emotional_engine._calculate_lambda() > 0.4 else "Warning: Low Conscience"
+        "emotional_health": "Stable" if current_lambda > 0.4 else "Warning: Low Conscience"
     }
 
 # هذا الجزء فقط للتأكد من عمل uvicorn في التطوير المحلي
