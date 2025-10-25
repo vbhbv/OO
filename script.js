@@ -1,13 +1,12 @@
 // **التعديل النهائي:** تم تعيين رابط API إلى خدمة Render المنشورة (مع إضافة المسار الصحيح).
-const API_ENDPOINT = "https://oo-2-akpa.onrender.com/api/ask"; 
+const API_ENDPOINT = "https://oo-4.onrender.com/api/ask"; 
+// تأكد من أن الرابط هو https://oo-4.onrender.com/api/ask
 
 function updateEmotionalDisplay(state, lambda_val) {
-    // تحديث قيم المشاعر
     document.getElementById('guilt-level').textContent = state.guilt.toFixed(2);
     document.getElementById('pride-level').textContent = state.pride.toFixed(2);
     document.getElementById('fear-level').textContent = state.fear.toFixed(2);
     document.getElementById('joy-level').textContent = state.joy.toFixed(2);
-    // تحديث قيمة معامل اللامدا (الضمير)
     document.getElementById('lambda-level').textContent = lambda_val.toFixed(2);
 }
 
@@ -47,6 +46,7 @@ async function sendMessage() {
         updateEmotionalDisplay(data.new_state, data.lambda_value);
 
     } catch (error) {
+        // إذا ظهر هذا الخطأ مرة أخرى، فهذا يعني أن خادم Render لا يعمل بشكل صحيح
         displayMessage('error', `حدث خطأ في الاتصال بالخدمة: ${error.message}`);
         console.error("Error communicating with API:", error);
     }
