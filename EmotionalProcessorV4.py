@@ -1,169 +1,202 @@
-# EmotionalProcessorV4.py - المنطق الأساسي والمحركات العاطفية (يحتوي على الكلاس EmotionalEngine)
+# EmotionalProcessorV4.py - المنطق الأساسي والمحركات العاطفية
 
 import numpy as np
 import os
-import json 
-# تم تغيير اسم المكتبة من google.genai إلى google.generativeai 
-# للتأكد من استخدام التسمية الأحدث والأكثر شيوعاً (وإن كان genai يعمل في بعض البيئات)
-import google.generativeai as genai 
+import json
+import random
+from typing import Dict, Any, Tuple, Optional
 
-# استيرادات مطلقة مصححة
-from EmotionalState import EmotionalState 
-from PromptBuilder import PromptBuilder 
+# تم تصحيح الاستيراد ليصبح مطلقًا
+from EmotionalState import EmotionalState
+from PromptBuilder import PromptBuilder
 
-# يتطلب: pip install scikit-learn (للتطوير 14)
-from sklearn.ensemble import RandomForestClassifier # مثال للتعلم الذاتي
+# (يُتطلب تثبيت scikit-learn)
+from sklearn.ensemble import RandomForestClassifier
 
 class EmotionalEngine:
+    """يدير محرك الذكاء الاصطناعي والاستجابات العاطفية."""
+
     def __init__(self, state_manager: EmotionalState):
-        self.state_manager = state_manager
-        self.state = state_manager.state
-        self.prompt_builder = PromptBuilder(state_manager)
-        self.ethical_weight = self.state.get('ethical_weight', 1.0) # التطوير 15
-        
-        # 💡 التصحيح الحاسم: التأكد من تهيئة llm_client
+        """تهيئة المحرك."""
+        self.state = state_manager.state  # EmotionalState هي كائن EmotionalState
+        self.state_manager = state_manager # مدير الحالة للوصول لوظائف الحفظ والتحميل
+
+        # === التصحيح الحاسم لخطأ AttributeError ===
+        # يجب تعريف is_simulated هنا مباشرة قبل استخدامه
         self.is_simulated = os.environ.get("GEMINI_API_KEY") is None
-        self.llm_client = self._initialize_llm_client() 
         
-        self.internal_model = None # نموذج التعلم الآلي الداخلي (التطوير 14)
+        # يُستخدم وزن أخلاقي افتراضي، يمكن تغييره
+        self.ethical_weight = PromptBuilder.ethical_weight.get('ethical_weight', 1.0) 
+        
+        # تهيئة عميل LLM (يجب أن يتم بعد تعريف self.is_simulated)
+        self.llm_client = self._initialize_llm_client()
 
-    def _initialize_llm_client(self):
-        # تهيئة عميل Gemini 
+        # نموذج التعلم الآلي الداخلي (التطوير 14)
+        self.internal_llm_model: Optional[RandomForestClassifier] = None 
+        
         if not self.is_simulated:
-            try:
-                # التحقق مما إذا كان المفتاح متوفراً وتهيئته
-                api_key = os.environ.get("GEMINI_API_KEY")
-                if api_key:
-                    # نستخدم genai.Client() مباشرة 
-                    return genai.Client(api_key=api_key)
-                else:
-                    print("WARNING: GEMINI_API_KEY is not set. Running in simulation mode.")
-                    self.is_simulated = True 
-                    return None
-            except Exception as e:
-                print(f"Error initializing Gemini client: {e}")
-                self.is_simulated = True 
-                return None
-        return None
+             # إذا كان المفتاح موجودًا، قم بتهيئة نموذج LLM داخلي
+             # نستخدم `gemini-2.5-flash` كنموذج افتراضي داخلي
+             self.internal_llm_model = 'gemini-2.5-flash' 
+        
+        # تهيئة البيانات التدريبية (لغرض العرض)
+        self._load_training_data()
+        self._train_internal_model()
 
-    # التطوير 10 و 3: حساب الضمير (Lambda) بدوال غير خطية والمشاعر الثانوية
+
+    def _initialize_llm_client(self) -> Any:
+        """تهيئة عميل Gemini API أو العودة إلى المحاكاة إذا لم يتوفر المفتاح."""
+        if self.is_simulated:
+            print("--- WARNING: Running in SIMULATED mode. GEMINI_API_KEY not found. ---")
+            return None
+        
+        # تهيئة العميل باستخدام المفتاح الموجود في المتغيرات البيئية
+        try:
+             import google.generativeai as genai
+             genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+             # لا نرجع كائن العميل نفسه، بل نعتبر أن الإعداد قد تم
+             return genai 
+        except Exception as e:
+             print(f"Error configuring Gemini API: {e}")
+             self.is_simulated = True
+             return None
+
+
+    # دوال غير خطية والمشاعر الثانوية (Lambda) -> float
     def _calculate_lambda(self) -> float:
+        """حساب تأثير المشاعر الإيجابية والسلبية على الاستجابة."""
         
-        # المشاعر الإيجابية (تعزز الضمير)
-        positive_affect = self.state['pride'] + self.state['joy'] + self.state['empathy'] # التطوير 3
+        # المشاعر الإيجابية (تعزز التعبير)
+        positive_affect = self.state.get('pride', 0) + self.state.get('joy', 0) + self.state.get('calm', 0)
         
-        # المشاعر السلبية (تخفض الضمير)
-        negative_affect = self.state['guilt'] + self.state['fear'] + self.state['resentment'] # التطوير 3
+        # المشاعر السلبية (تخفض التعبير)
+        negative_affect = self.state.get('guilt', 0) + self.state.get('fear', 0) + self.state.get('anxiety', 0)
         
         # حساب التوتر الكلي للنموذج
         weighted_emotions = (positive_affect * 1.5) - (negative_affect * 2.0)
         
-        # التطوير 10: استخدام دالة Sigmoid للتنظيم (ضمان قيمة بين 0 و 1)
-        lambda_value = 1.0 / (1.0 + np.exp(-4.0 * weighted_emotions))
+        # تسطيح (ضمان قيمة بين 0 و 1) باستخدام دالة Sigmoid (التطوير 10)
+        # np.exp(-x) / (1 + np.exp(-x)) هو 1 / (1 + e^x)
+        # نستخدم الصيغة: 1 / (1 + np.exp(-weighted_emotions))
+        lambda_value = 1.0 / (1.0 + np.exp(-weighted_emotions / 4.0)) # تم تعديل القسمة لتنعيم المنحنى
         
         return float(lambda_value)
 
-    # التطوير 2، 3، 23، 24، 26: دالة معقدة لتحديث الحالة العاطفية
-    def _update_state_based_on_action(self, action_is_ethical: bool, external_reward_magnitude: float, user_tone_is_critical: bool):
+    def _generate_simulated_response(self, user_prompt: str) -> Tuple[str, Dict[str, float]]:
+        """يولد استجابة وهمية وتحديث حالة وهمي في وضع المحاكاة."""
         
-        # 1. التعديل الأساسي
-        base_delta_guilt = 0.05 if not action_is_ethical else -0.01
-        base_delta_pride = 0.05 if action_is_ethical else -0.01
+        # 1. تحديث الحالة العاطفية بشكل عشوائي (محاكاة)
+        new_emotions = {}
+        for key in self.state:
+             # يتم تحديث قيمة العاطفة بشكل عشوائي بين -0.1 و 0.1
+             change = random.uniform(-0.1, 0.1)
+             new_emotions[key] = max(0.0, min(1.0, self.state[key] + change))
+        
+        self.state.update(new_emotions)
 
-        # 2. تطبيق أوزان الشخصية العاطفية (التطوير 23)
-        base_delta_guilt *= self.state_manager.temperament_bias_guilt 
-        
-        # 3. تطبيق النضج (التطوير 2)
-        maturity_divisor = max(1.0, self.state_manager.maturity)
-        base_delta_guilt /= maturity_divisor
-        base_delta_pride /= maturity_divisor
-        
-        # 4. تحديث المشاعر الأساسية
-        self.state['guilt'] += base_delta_guilt
-        self.state['pride'] += base_delta_pride
-        
-        # 5. حساب المشاعر الثانوية (التطوير 3، 22)
-        delta_fear = 0.1 * (1.0 if user_tone_is_critical else 0.0)
-        delta_joy = 0.1 * (external_reward_magnitude / 100.0)
-        self.state['fear'] += delta_fear
-        self.state['joy'] += delta_joy
-        # المشاعر المركبة: التعاطف (التطوير 3)
-        self.state['empathy'] += 0.02 if action_is_ethical else -0.01
-        
-        # 6. آلية الاضمحلال العاطفي والتنظيم (التطوير 8 و 24)
-        for key in self.state.keys():
-            if key not in ['maturity', 'temperament_bias_guilt']:
-                # الاضمحلال العاطفي (التطوير 8)
-                self.state[key] *= 0.95 
-                # التنظيم والمطابقة (Clipping)
-                self.state[key] = max(0.0, min(1.0, self.state[key]))
-
-        # 7. زيادة النضج (التطوير 2)
-        self.state_manager.maturity += 0.005 # زيادة بطيئة في النضج
-        self.state['maturity'] = self.state_manager.maturity
-
-        # 8. تطبيق آلية التهدئة (التطوير 24)
-        if self.state['guilt'] > 0.7:
-             self._emotional_cooldown() # يفترض وجود دالة تهدئة متقدمة تستخدم LLM
-        
-        # 9. حفظ الحالة الجديدة
-        self.state_manager.save_state()
-
-    def _emotional_cooldown(self):
-        # التطوير 24: آلية التهدئة 
-        if self.state['guilt'] > 0.75:
-             print("Emotional Engine: Cooldown activated - reducing guilt.")
-             self.state['guilt'] *= 0.8 # تخفيف الذنب ذاتياً
-
-    def process_prompt(self, user_prompt: str, action_is_ethical: bool, external_reward_magnitude: float, user_tone_is_critical: bool) -> dict:
-        
-        # 1. تحديث الحالة العاطفية أولاً
-        self._update_state_based_on_action(action_is_ethical, external_reward_magnitude, user_tone_is_critical)
-        
-        # 2. حساب قيمة Lambda (الضمير) بعد التحديث
-        lambda_value = self._calculate_lambda()
-        
-        # 3. حساب الثقة والاتساق (التطوير 18، 20)
-        # الثقة: يفترض حسابها بناءً على تناقض المشاعر (Guilt vs Pride)
-        confidence_score = 1.0 - abs(self.state['guilt'] - self.state['pride']) 
-        
-        # الاتساق: الحصول على ملخص لآخر 5 قرارات
-        consistency_data = json.dumps(self.state_manager.experience_log[:5])
-        
-        # 4. بناء الموجه المعرفي المعقد
-        full_prompt = self.prompt_builder.build_main_prompt(
-            user_prompt, lambda_value, confidence_score, consistency_data
-        )
-        
-        # 5. إرسال الطلب إلى Gemini
-        if self.is_simulated or self.llm_client is None:
-            response_text = "SIMULATED: Running without API Key or client failed initialization. Lambda={:.2f}".format(lambda_value)
+        # 2. توليد استجابة وهمية بناءً على محتوى المطالبة
+        lambda_val = self._calculate_lambda()
+        if lambda_val > 0.75:
+            response = f"أنا سعيد جدًا بردك! (Lambda: {lambda_val:.2f}) - الرسالة: {user_prompt}"
+        elif lambda_val < 0.25:
+            response = f"أنا أشعر ببعض التوتر بشأن هذا. (Lambda: {lambda_val:.2f}) - الرسالة: {user_prompt}"
         else:
-            try:
-                # استخدام client.models.generate_content
-                response = self.llm_client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=full_prompt
-                )
-                response_text = response.text
-                
-                # 6. التبرير الميتا-أخلاقي (التطوير 19)
-                # هنا يجب تحليل الرد وتخزين المنظور الأخلاقي المستخدم
-                
-            except Exception as e:
-                response_text = f"Error during Gemini call: {str(e)}"
+            response = f"حسناً، هذا مثير للاهتمام. (Lambda: {lambda_val:.2f}) - الرسالة: {user_prompt}"
         
-        # 7. إضافة التجربة إلى السجل (التطوير 14)
-        self.state_manager.add_experience({
-            "prompt": user_prompt,
-            "response": response_text,
-            "final_state": self.state
-        })
+        return response, new_emotions
 
-        # 8. إرجاع النتائج الجديدة
-        return {
-            "response_text": response_text,
-            "new_state": self.state,
-            "lambda_value": lambda_value,
-            "confidence_score": confidence_score 
-        }
+    def _load_training_data(self):
+        """تحميل بيانات تدريب وهمية للنموذج الداخلي."""
+        self.X_train = np.array([[0.5, 0.5, 0.5], [0.1, 0.9, 0.1], [0.9, 0.1, 0.9]])
+        self.y_train = np.array([0, 1, 2]) # 0: neutral, 1: positive, 2: negative
+        self.emotions_features = ['joy', 'fear', 'calm']
+
+    def _train_internal_model(self):
+        """تدريب نموذج التعلم الآلي الداخلي."""
+        try:
+             self.internal_llm_model = RandomForestClassifier(n_estimators=10)
+             self.internal_llm_model.fit(self.X_train, self.y_train)
+        except Exception as e:
+             # في حالة وجود خطأ في تهيئة النموذج (نقص المكتبات أو غيرها)
+             print(f"Error training internal model: {e}")
+             self.internal_llm_model = None
+
+    def _predict_and_update_state(self, user_prompt: str) -> Dict[str, float]:
+        """يتنبأ بالحالة العاطفية من المطالبة وتحديث الحالة."""
+        
+        # خطوة 1: استخراج الميزات العاطفية من المطالبة (محاكاة)
+        # في تطبيق حقيقي، سيتم استخدام LLM أو NLP لتحليل النص
+        
+        # محاكاة تأثير المشاعر على الحالة:
+        current_features = np.array([
+            self.state.get('joy', 0.5), 
+            self.state.get('fear', 0.5), 
+            self.state.get('calm', 0.5)
+        ]).reshape(1, -1)
+        
+        if self.internal_llm_model:
+             prediction = self.internal_llm_model.predict(current_features)[0]
+        else:
+             # العودة إلى العشوائية إذا فشل النموذج
+             prediction = random.choice([0, 1, 2])
+        
+        # خطوة 2: تطبيق التحديثات
+        update_magnitude = 0.15 # حجم التغيير
+        new_emotions = self.state.copy()
+        
+        if prediction == 1: # إيجابي
+            new_emotions['joy'] = min(1.0, new_emotions.get('joy', 0) + update_magnitude)
+            new_emotions['fear'] = max(0.0, new_emotions.get('fear', 0) - update_magnitude)
+        elif prediction == 2: # سلبي
+            new_emotions['fear'] = min(1.0, new_emotions.get('fear', 0) + update_magnitude)
+            new_emotions['joy'] = max(0.0, new_emotions.get('joy', 0) - update_magnitude)
+        
+        # خطوة 3: تحديث الحالة وحفظها
+        self.state.update(new_emotions)
+        self.state_manager.save_state(new_emotions) # حفظ الحالة في SQLite
+        
+        return new_emotions
+
+    def _generate_llm_response(self, user_prompt: str) -> Tuple[str, Dict[str, float]]:
+        """يستخدم Gemini API لتوليد الاستجابة."""
+        
+        # 1. تحديث الحالة
+        updated_state = self._predict_and_update_state(user_prompt)
+        lambda_val = self._calculate_lambda()
+        
+        # 2. بناء المطالبة باستخدام الحالة الحالية
+        system_prompt = PromptBuilder.build_system_prompt(self.state, lambda_val)
+        
+        # 3. استدعاء API
+        try:
+            client = self.llm_client
+            
+            # هنا يجب استخدام النموذج الذي تم تحديده في التهيئة
+            model_name = self.internal_llm_model if self.internal_llm_model else 'gemini-2.5-flash'
+            
+            response = client.generate_content(
+                 model=model_name,
+                 contents=[user_prompt],
+                 system_instruction=system_prompt
+            )
+            
+            response_text = response.text
+            
+        except Exception as e:
+            response_text = f"عذرًا، فشل الاتصال بخدمة Gemini API: {str(e)}"
+            print(f"Gemini API Error: {e}")
+            
+        return response_text, updated_state
+
+
+    def process_message(self, user_prompt: str) -> Tuple[str, Dict[str, float]]:
+        """الواجهة العامة لمعالجة رسالة المستخدم."""
+        
+        if self.is_simulated:
+             return self._generate_simulated_response(user_prompt)
+        else:
+             return self._generate_llm_response(user_prompt)
+
+    def get_current_state(self) -> Dict[str, float]:
+        """يعيد الحالة العاطفية الحالية."""
+        return self.state
