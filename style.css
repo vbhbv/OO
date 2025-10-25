@@ -1,0 +1,164 @@
+/* تنسيق عام */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+
+body {
+    font-family: 'Cairo', sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    direction: rtl; /* دعم اللغة العربية */
+    text-align: right;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #007bff;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+}
+
+/* تنسيق اللوحات (Panels) */
+.panel {
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #fafafa;
+}
+
+/* لوحة الحالة العاطفية */
+.emotional-state-panel h2 {
+    color: #28a745;
+    border-bottom: 2px solid #28a745;
+    padding-bottom: 5px;
+    margin-top: 0;
+    font-size: 1.2em;
+}
+
+.emotional-state-panel p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95em;
+}
+
+.emotion-value {
+    font-weight: 700;
+    color: #007bff;
+}
+
+.lambda-display {
+    font-size: 1.1em !important;
+    font-weight: 700;
+    color: #dc3545; /* Lambda بلون أحمر لشدة الأهمية */
+}
+
+.lambda-key {
+    font-style: italic;
+}
+
+/* واجهة الدردشة */
+.chat-panel {
+    background-color: #ffffff;
+}
+
+.chat-panel h2 {
+    color: #17a2b8;
+    border-bottom: 2px solid #17a2b8;
+    padding-bottom: 5px;
+    margin-top: 0;
+    font-size: 1.2em;
+}
+
+#chat-box {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    background-color: #fff;
+    line-height: 1.6;
+}
+
+/* تنسيق الرسائل */
+#chat-box p {
+    margin: 10px 0;
+    padding: 8px 12px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.user {
+    background-color: #007bff;
+    color: white;
+    margin-right: auto;
+    border-top-right-radius: 0;
+}
+
+.ai {
+    background-color: #e2f0ff;
+    color: #333;
+    margin-left: auto;
+    border-top-left-radius: 0;
+}
+
+.initial-message {
+    background-color: #f1f8e9;
+    color: #333;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    text-align: center;
+}
+
+/* منطقة الإدخال والزر */
+.input-area {
+    display: flex;
+    gap: 10px;
+}
+
+#user-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+    direction: rtl;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-weight: 700;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
