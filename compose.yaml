@@ -1,17 +1,11 @@
+version: '3.8'
 services:
-  flask:
-    restart: unless-stopped
-    build:
-      context: ./flask
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        reservations:
-          cpus: "1.0"
-          memory: 512M
+  agent: # اسم الخدمة
+    build: .
     ports:
-      - mode: ingress
-        target: 5000
-        published: 5000
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import sys, urllib.request; urllib.request.urlopen(sys.argv[1]).read()", "http://localhost:5000/"]
+      - "8080:8080"
+    environment:
+      # متغير البيئة الذي سيتم تعيينه في Defang Secrets
+      GEMINI_API_KEY: ${GEMINI_API_KEY} 
+    # الأمر الجديد لتشغيل FastAPI
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"] 
