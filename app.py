@@ -1,76 +1,67 @@
-# app.py - نقطة الدخول الرئيسية لتطبيق FastAPI
+# app.py
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional
+# نقطة الدخول الرئيسية لتطبيق FastAPI
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import os
-import uvicorn
-import json
 
-# استيرادات مطلقة مصححة
-from EmotionalProcessorV4 import EmotionalEngine 
+# استخدام الاستيراد المطلق لضمان عمله في بيئات النشر
+from EmotionalProcessorV4 import EmotionalEngine
 from EmotionalState import EmotionalState
+from PromptBuilder import PromptBuilder
 
-# تهيئة التطبيق والحالة
-app = FastAPI()
+# تهيئة Firebase (هذه الخطوة غير ضرورية حاليًا ما دمنا نستخدم SQLite محليًا، لكنها خطوة جيدة)
+# سنقوم بالتهيئة الأساسية هنا، لكن التطبيق يعتمد على SQLite حاليًا
+# app = initialize_firebase_app() 
+
+# تهيئة محرك العواطف (يستخدم حالة عاطفية محددة)
 state_manager = EmotionalState()
-emotional_engine = EmotionalEngine(state_manager) # تهيئة محرك المشاعر
+# هنا يتم تهيئة EmotionalEngine، حيث يتم تمرير state_manager إليه
+# ويتم تهيئة LLM client بداخله بشكل آمن
+engine = EmotionalEngine(state_manager=state_manager)
 
-# تعريف نموذج البيانات للمدخلات
-class PromptRequest(BaseModel):
-    prompt: str
-    action_is_ethical: bool
-    external_reward_magnitude: float
-    user_tone_is_critical: bool
+app = FastAPI(
+    title="Emotional Chat API",
+    description="API for the emotionally aware chat companion.",
+    version="1.0.0"
+)
 
-# تعريف نموذج البيانات للمخرجات (للتطوير 21)
-class EmotionResponse(BaseModel):
-    response_text: str
-    guilt: float
-    pride: float
-    fear: float
-    joy: float
-    empathy: float
-    resentment: float
-    lambda_value: float
-    confidence_score: float
-    maturity: float
+# تفعيل CORS للسماح بالوصول من أي مصدر (مهم للتطبيقات الـ Frontend)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # يسمح لأي نطاق بالوصول
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():
-    return {"message": "Emotional AI Engine V4 running with FastAPI."}
+    """ نقطة وصول أساسية للتحقق من أن الـ API يعمل. """
+    return {"status": "Operational", "message": "Emotional Chat API is running."}
 
-@app.post("/process_prompt", response_model=EmotionResponse)
-async def process_prompt_endpoint(request: PromptRequest):
+@app.post("/chat")
+def chat_endpoint(user_prompt: str):
+    """ نقطة وصول لمعالجة طلبات الدردشة مع المستخدم. """
     try:
-        # معالجة الطلب باستخدام المحرك العاطفي
-        result = emotional_engine.process_prompt(
-            user_prompt=request.prompt,
-            action_is_ethical=request.action_is_ethical,
-            external_reward_magnitude=request.external_reward_magnitude,
-            user_tone_is_critical=request.user_tone_is_critical
-        )
+        # معالجة الطلب عبر محرك العواطف
+        response_text, state_update = engine.process_message(user_prompt)
         
-        # تجهيز البيانات للإخراج
-        new_state = result['new_state']
-        
-        return EmotionResponse(
-            response_text=result['response_text'],
-            guilt=new_state.get('guilt', 0.0),
-            pride=new_state.get('pride', 0.0),
-            fear=new_state.get('fear', 0.0),
-            joy=new_state.get('joy', 0.0),
-            empathy=new_state.get('empathy', 0.0),
-            resentment=new_state.get('resentment', 0.0),
-            lambda_value=result['lambda_value'],
-            confidence_score=result['confidence_score'],
-            maturity=new_state.get('maturity', 1.0)
-        )
-        
+        return {
+            "response": response_text,
+            "current_state": state_update
+        }
     except Exception as e:
-        print(f"Error processing prompt: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # معالجة الأخطاء وإرسال رسالة خطأ واضحة
+        return {"response": f"An error occurred: {str(e)}", "current_state": "Error"}
 
-if __name__ == "__main__":
-    # تشغيل التطبيق محلياً
-    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv('PORT', 8000)))
+@app.get("/state")
+def get_state():
+    """ نقطة وصول للحصول على الحالة العاطفية الحالية. """
+    return engine.get_current_state()
+
+# @app.post("/reset")
+# def reset_state_endpoint():
+#     """ نقطة وصول لإعادة تعيين حالة العواطف (اختياري). """
+#     # يمكن إضافة منطق إعادة تعيين الحالة هنا
+#     return {"status": "State reset placeholder"}
