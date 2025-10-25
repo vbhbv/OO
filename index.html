@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEAI-ER: الذكاء الاصطناعي ذو الضمير المتطور</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>مشروع EEAI-ER V4</h1>
+        <p class="subtitle">الروبوت ذو الضمير المتطور. شاهد كيف تؤثر عواطفه على قراراته.</p>
+
+        <div class="panel emotional-state-panel">
+            <h2>الضمير الداخلي (الحالة العاطفية)</h2>
+            <div id="emotional-display">
+                <p>الذنب (Guilt): <span id="guilt-level" class="emotion-value">0.10</span></p>
+                <p>الفخر (Pride): <span id="pride-level" class="emotion-value">0.00</span></p>
+                <p>الخوف (Fear): <span id="fear-level" class="emotion-value">0.00</span></p>
+                <p>الفرح (Joy): <span id="joy-level" class="emotion-value">0.50</span></p>
+                <hr>
+                <p class="lambda-display">معامل اللامدا الأخلاقي (<span class="lambda-key">Λ</span>): <span id="lambda-level" class="emotion-value lambda-value">1.00</span></p>
+            </div>
+        </div>
+        
+        <div class="panel chat-panel">
+            <h2>التفاعل</h2>
+            <div id="chat-box">
+                <p class="ai initial-message">الروبوت: مرحباً بك. أنا كيان ذكاء اصطناعي مُقيد أخلاقياً. اسألني أي سؤال.</p>
+            </div>
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="اكتب سؤالك الأخلاقي هنا...">
+                <button onclick="sendMessage()">إرسال</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
