@@ -1,7 +1,7 @@
-​fastapi
-uvicorn
-​google-generativeai
 numpy
 scikit-learn
-​pydantic
+fastapi
+uvicorn
+google-generativeai
+pydantic
 python-multipart
